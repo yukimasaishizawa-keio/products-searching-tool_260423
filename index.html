@@ -59,7 +59,6 @@
             gap: 8px;
         }
 
-        /* Forms & Inputs */
         .input-group { margin-bottom: 16px; }
         .input-group label {
             display: block;
@@ -92,12 +91,11 @@
             transition: opacity 0.2s, background-color 0.2s;
         }
         button:active { opacity: 0.8; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn-primary { background-color: var(--primary-color); color: white; }
         .btn-secondary { background-color: #2c2c2e; color: white; border: 1px solid var(--border-color); }
-        .btn-success { background-color: var(--success-color); color: white; }
 
-        /* Tabs & Buttons Groups */
         .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
         .tab-btn { flex: 1; background-color: #2c2c2e; color: var(--text-secondary); }
         .tab-btn.active { background-color: var(--primary-color); color: white; }
@@ -106,7 +104,6 @@
         .depth-btn { flex: 1; font-size: 14px; padding: 10px; background-color: #2c2c2e; color: var(--text-secondary); }
         .depth-btn.active { background-color: var(--primary-color); color: white; }
 
-        /* Scanner */
         #scanner-container {
             width: 100%;
             border-radius: 8px;
@@ -118,7 +115,6 @@
         }
         #video { width: 100%; display: block; }
         
-        /* Progress UI */
         #progress-section { display: none; margin-bottom: 20px; }
         .progress-bar {
             width: 100%;
@@ -136,7 +132,6 @@
         }
         .status-text { font-size: 14px; color: var(--text-secondary); text-align: center; }
 
-        /* Results UI */
         #results-section { display: none; }
         .result-list { list-style: none; padding: 0; }
         .result-item {
@@ -146,17 +141,21 @@
             margin-bottom: 8px;
             font-size: 14px;
             border-left: 4px solid var(--primary-color);
+            line-height: 1.5;
         }
         .result-item.spec-item { border-left-color: var(--success-color); }
         .source-link {
-            display: block;
+            display: inline-block;
             font-size: 11px;
             color: var(--text-secondary);
-            margin-top: 6px;
+            margin-top: 8px;
             text-decoration: none;
             word-break: break-all;
+            background: rgba(255,255,255,0.05);
+            padding: 4px 8px;
+            border-radius: 4px;
         }
-        .source-link:hover { text-decoration: underline; }
+        .source-link:hover { text-decoration: underline; background: rgba(255,255,255,0.1); }
 
         .spinner {
             display: inline-block;
@@ -171,7 +170,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Utility */
         .hidden { display: none !important; }
         .flex { display: flex; align-items: center; justify-content: space-between; }
         
@@ -207,8 +205,8 @@
             </div>
             <button class="btn-secondary" id="start-scan-btn" onclick="startScanner()" style="margin-bottom: 12px;">📷 カメラを起動</button>
             <div class="input-group">
-                <label>読み取り結果 (JAN)</label>
-                <input type="text" id="jan-input" placeholder="バーコードをスキャンまたは入力" readonly>
+                <label>読み取り結果 (手入力も可能)</label>
+                <input type="text" id="jan-input" placeholder="バーコードをスキャンまたは入力">
             </div>
         </div>
 
@@ -226,11 +224,11 @@
             <input type="text" id="question-input" placeholder="例：初心者向け？ デメリットは？ 他社との違い？">
         </div>
 
-        <button class="btn-primary" onclick="startResearch()">🚀 調査開始</button>
+        <button class="btn-primary" id="search-btn" onclick="startResearch()">🚀 調査開始</button>
     </div>
 
     <div class="card" id="progress-section">
-        <div class="card-title"><div class="spinner" id="main-spinner"></div> <span id="progress-title">調査準備中...</span></div>
+        <div class="card-title"><div class="spinner" id="main-spinner"></div> <span id="progress-title">調査中...</span></div>
         <div class="progress-bar">
             <div class="progress-fill" id="progress-fill"></div>
         </div>
@@ -261,25 +259,25 @@
                 <div class="spinner hidden" id="spec-spinner" style="border-top-color: var(--success-color); width:16px; height:16px;"></div>
             </div>
             <ul class="result-list" id="spec-results"></ul>
-            <div id="spec-empty" class="text-secondary" style="font-size:14px; display:none;">スペック情報が見つかりませんでした。</div>
+            <div id="spec-empty" class="text-secondary" style="font-size:14px; display:none;">スペック情報を調査中です...</div>
         </div>
+        
+        <button class="btn-secondary" onclick="resetUI()" style="margin-top: 10px;">← 新しい検索をする</button>
     </div>
 </div>
 
 <script>
-    // Configuration
     const CONFIG = {
         fast: { pages: 2, sentences: 10 },
         standard: { pages: 4, sentences: 20 },
         thorough: { pages: 8, sentences: 40 }
     };
     
-    // State
-    let currentMode = 'text'; // 'text' or 'barcode'
+    let currentMode = 'text';
     let currentDepth = 'standard';
     let codeReader = null;
+    let abortController = new AbortController();
 
-    // --- UI Controls ---
     function switchTab(mode) {
         currentMode = mode;
         const tabs = document.querySelectorAll('.tab-btn');
@@ -298,22 +296,23 @@
         btnElement.classList.add('active');
     }
 
-    // --- ZXing Barcode Scanner ---
     async function startScanner() {
         const container = document.getElementById('scanner-container');
         container.style.display = 'block';
         document.getElementById('start-scan-btn').innerText = 'カメラインストール中...';
 
         try {
-            codeReader = new ZXing.BrowserMultiFormatReader();
+            if (!codeReader) {
+                codeReader = new ZXing.BrowserMultiFormatReader();
+            }
             const videoInputDevices = await codeReader.listVideoInputDevices();
             
             if (videoInputDevices.length === 0) {
                 alert('カメラが見つかりません');
+                stopScanner();
                 return;
             }
             
-            // Prefer back camera
             const selectedDeviceId = videoInputDevices.length > 1 ? videoInputDevices[1].deviceId : videoInputDevices[0].deviceId;
             document.getElementById('start-scan-btn').innerText = 'スキャン中...';
 
@@ -321,13 +320,13 @@
                 if (result) {
                     document.getElementById('jan-input').value = result.text;
                     stopScanner();
-                    // Auto switch to manual input look to indicate success
-                    document.getElementById('start-scan-btn').innerText = '✅ スキャン成功';
+                    document.getElementById('start-scan-btn').innerText = '✅ スキャン成功 (再試行はカメラを起動)';
                 }
             });
         } catch (err) {
             console.error(err);
             alert('カメラの起動に失敗しました。');
+            stopScanner();
         }
     }
 
@@ -339,143 +338,146 @@
         }
     }
 
-    // --- Core Scraping Engine ---
-    // Note: To work purely in browser without backend, we use allorigins CORS proxy to fetch DuckDuckGo HTML
     const CORS_PROXY = 'https://api.allorigins.win/get?url=';
     
-    async function fetchWithTimeout(url, timeoutMs = 10000) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    async function fetchWithTimeout(url, timeoutMs = 8000) {
         try {
-            const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: controller.signal });
+            const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: abortController.signal });
+            if (!res.ok) return null;
             const data = await res.json();
-            clearTimeout(timeout);
             return data.contents;
         } catch (e) {
-            clearTimeout(timeout);
-            console.warn('Fetch failed or timed out:', url);
+            console.warn('Fetch failed or aborted:', url);
             return null;
         }
     }
 
     async function searchDuckDuckGo(query) {
         const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-        const html = await fetchWithTimeout(url);
+        const html = await fetchWithTimeout(url, 10000);
         if (!html) return [];
         
         const doc = new DOMParser().parseFromString(html, 'text/html');
-        // Extract links
-        const links = Array.from(doc.querySelectorAll('.result__snippet, .result__url, a.result__a'))
-            .map(el => el.href || el.getAttribute('href'))
-            .filter(href => href && href.startsWith('http') && !href.includes('duckduckgo.com'))
-            .map(href => {
-                // allorigins sometimes returns DDG redirect links, try to extract real URL
-                try {
-                    const urlObj = new URL(href);
-                    if (urlObj.searchParams.has('uddg')) return decodeURIComponent(urlObj.searchParams.get('uddg'));
-                    return href;
-                } catch(e) { return href; }
-            });
         
-        return [...new Set(links)]; // unique
+        const links = Array.from(doc.querySelectorAll('a.result__url, a.result__snippet, .result__body a'))
+            .map(el => el.getAttribute('href'))
+            .filter(href => href && !href.startsWith('javascript') && !href.startsWith('#'))
+            .map(href => {
+                try {
+                    if (href.includes('uddg=')) {
+                        const baseUrl = href.startsWith('http') ? href : 'https://html.duckduckgo.com' + (href.startsWith('/') ? '' : '/') + href;
+                        const urlObj = new URL(baseUrl);
+                        return decodeURIComponent(urlObj.searchParams.get('uddg'));
+                    }
+                    return href.startsWith('//') ? 'https:' + href : href;
+                } catch(e) { return href; }
+            })
+            .filter(href => href && href.startsWith('http') && !href.includes('duckduckgo.com') && !href.includes('amazon.') && !href.includes('rakuten.'));
+        
+        return [...new Set(links)]; 
     }
 
-    // --- Data Processing ---
     function extractSentencesFromHTML(html) {
+        if (!html) return [];
         const doc = new DOMParser().parseFromString(html, 'text/html');
         
-        // Remove structural and script tags
-        const tagsToRemove = ['script', 'style', 'nav', 'footer', 'header', 'noscript', 'aside', 'iframe', 'svg', 'form'];
+        const tagsToRemove = ['script', 'style', 'nav', 'footer', 'header', 'noscript', 'aside', 'iframe', 'svg', 'form', 'button', 'menu'];
         tagsToRemove.forEach(tag => {
             const elements = doc.querySelectorAll(tag);
             elements.forEach(el => el.remove());
         });
 
-        // Extract raw text
         const text = doc.body ? doc.body.innerText || doc.body.textContent : '';
         
-        // Split by Japanese punctuation and newlines
         return text.split(/[。！？\n]/)
-            .map(s => s.trim())
-            .filter(s => s.length > 10 && s.length < 200); // Filter out too short or absurdly long strings
+            .map(s => s.trim().replace(/^[\s　・\-]+/, ''))
+            .filter(s => s.length > 15 && s.length < 300); 
     }
 
-    function scoreSentence(sentence, queryWords, isSpec = false) {
+    function scoreSentence(sentence, queryWords, productName, isSpec = false) {
         let score = 0;
         const lowerSentence = sentence.toLowerCase();
 
         if (isSpec) {
-            // Check for numbers followed by common spec units
-            if (/\d+(\.\d+)?\s*(mm|cm|g|kg|px|W|V|Hz|mAh|GB|TB|K|万画素|インチ|型|fps)/i.test(sentence)) score += 50;
-            if (lowerSentence.includes('仕様') || lowerSentence.includes('スペック')) score += 20;
+            if (/\d+(\.\d+)?\s*(mm|cm|m|g|kg|px|W|V|Hz|mAh|GB|TB|K|万画素|インチ|型|fps|時間|分)/i.test(sentence)) score += 50;
+            if (lowerSentence.match(/(仕様|スペック|サイズ|重量|重さ|寸法|搭載|対応|インターフェース|端子|解像度|バッテリー)/)) score += 40;
         } else {
-            // Score based on question keywords
-            queryWords.forEach(word => {
-                if (word && lowerSentence.includes(word.toLowerCase())) score += 100;
-            });
+            if (queryWords.length > 0) {
+                queryWords.forEach(word => {
+                    if (word && lowerSentence.includes(word.toLowerCase())) score += 100;
+                });
+            } else {
+                if (lowerSentence.match(/(良い|悪い|おすすめ|メリット|デメリット|違い|比較|評価|感想|特徴|魅力|使いやすい|微妙)/)) score += 50;
+            }
+            
+            const shortName = productName.split(/[\s　・-]/)[0].toLowerCase();
+            if (shortName && lowerSentence.includes(shortName)) {
+                score += 20;
+            }
+            
+            if (score === 0 && Math.random() > 0.8) {
+                score = 1; 
+            }
         }
         return score;
     }
 
-    // --- Main Algorithm ---
     async function startResearch() {
-        // UI Reset
-        document.getElementById('input-card').style.display = 'none';
-        document.getElementById('progress-section').style.display = 'block';
-        document.getElementById('results-section').style.display = 'none';
-        
-        // Clear previous results
-        document.getElementById('question-results').innerHTML = '';
-        document.getElementById('general-results').innerHTML = '';
-        document.getElementById('spec-results').innerHTML = '';
-        ['question', 'general', 'spec'].forEach(k => document.getElementById(`${k}-empty`).style.display = 'none');
-        
+        abortController = new AbortController();
         const questionText = document.getElementById('question-input').value.trim();
         let productName = "";
         let searchMethod = "";
 
-        updateProgress(10, '① 商品情報を特定中...');
-
-        // Step 1: Identify Product
         if (currentMode === 'barcode') {
             const jan = document.getElementById('jan-input').value.trim();
-            if (!jan) { alert('バーコードを読み取るか入力してください。'); resetUI(); return; }
+            if (!jan) { alert('バーコードを入力またはスキャンしてください。'); return; }
             searchMethod = `JANコード: ${jan}`;
-            
-            // Try to find product name via JAN search
+            productName = `商品(JAN:${jan})`; 
+        } else {
+            productName = document.getElementById('model-input').value.trim();
+            if (!productName) { alert('型番を入力してください。'); return; }
+            searchMethod = `型番: ${productName}`;
+        }
+
+        document.getElementById('input-card').style.display = 'none';
+        document.getElementById('progress-section').style.display = 'block';
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('main-spinner').style.display = 'inline-block';
+        document.getElementById('progress-title').innerText = '調査中...';
+        
+        ['question-results', 'general-results', 'spec-results'].forEach(id => document.getElementById(id).innerHTML = '');
+        ['question', 'general', 'spec'].forEach(k => document.getElementById(`${k}-empty`).style.display = 'none');
+
+        updateProgress(10, '① 検索準備中...');
+
+        if (currentMode === 'barcode') {
+            const jan = document.getElementById('jan-input').value.trim();
             const janResults = await searchDuckDuckGo(`JAN ${jan}`);
             if (janResults.length > 0) {
                 const html = await fetchWithTimeout(janResults[0], 5000);
                 if (html) {
                     const doc = new DOMParser().parseFromString(html, 'text/html');
-                    productName = doc.title.replace(/価格.*|【.*】|通販.*/g, '').trim();
+                    const title = doc.title.replace(/価格.*|【.*】|通販.*|ヨドバシ.*|ビックカメラ.*/g, '').trim();
+                    if(title && title.length > 3) productName = title;
                 }
             }
-            if(!productName) productName = `商品(JAN:${jan})`; // Fallback
-        } else {
-            productName = document.getElementById('model-input').value.trim();
-            if (!productName) { alert('型番を入力してください。'); resetUI(); return; }
-            searchMethod = `型番: ${productName}`;
         }
 
-        // Display Step 1
         document.getElementById('basic-info-content').innerHTML = `
             <strong>${productName}</strong><br>
             <span style="color: var(--text-secondary); font-size:14px;">検索元: ${searchMethod}</span>
         `;
         document.getElementById('results-section').style.display = 'block';
 
-        updateProgress(30, '② 質問関連の情報をWebから収集・解析中... (最優先)');
+        updateProgress(30, '② 関連ページをWebから抽出中... (最優先)');
 
         const maxPages = CONFIG[currentDepth].pages;
         const maxSentences = CONFIG[currentDepth].sentences;
-        const qWords = questionText.split(/\s+/).filter(w => w);
+        const qWords = questionText.split(/[\s　]+/).filter(w => w);
 
-        // Step 2: Question & General Research (Priority)
         const queries = [
-            questionText ? `${productName} ${questionText}` : `${productName} レビュー`,
-            `${productName} 評判`,
-            `${productName} メリット デメリット`
+            questionText ? `${productName} ${questionText}` : `${productName} レビュー 評価`,
+            `${productName} 特徴 メリット`
         ];
 
         let collectedLinks = [];
@@ -485,41 +487,50 @@
         }
         collectedLinks = [...new Set(collectedLinks)].slice(0, maxPages);
 
+        if (collectedLinks.length === 0) {
+            updateProgress(100, '検索結果が取得できませんでした。');
+            document.getElementById('main-spinner').style.display = 'none';
+            document.getElementById('question-empty').style.display = 'block';
+            document.getElementById('general-empty').style.display = 'block';
+            document.getElementById('spec-empty').style.display = 'block';
+            document.getElementById('spec-empty').innerText = '情報が見つかりませんでした。';
+            return;
+        }
+
         let questionSentences = [];
         let generalSentences = [];
         
-        // Parallel Fetch
+        updateProgress(50, '③ ページ本文を解析し、情報を抽出中...');
+
         const fetchPromises = collectedLinks.map(async (url) => {
             const html = await fetchWithTimeout(url);
             if (!html) return;
             const sentences = extractSentencesFromHTML(html);
             
             sentences.forEach(sentence => {
-                // Ensure sentence mentions product or question context slightly
-                if(sentence.length < 15) return;
-                
-                const qScore = questionText ? scoreSentence(sentence, qWords) : 0;
-                const item = { text: sentence, url: url, score: qScore };
+                const score = scoreSentence(sentence, qWords, productName, false);
+                const item = { text: sentence, url: url, score: score };
 
-                if (qScore > 0) {
+                if (score >= 100) {
                     questionSentences.push(item);
-                } else if (Math.random() > 0.8) { // Sample general sentences to avoid massive arrays
+                } else if (score >= 20) {
+                    generalSentences.push(item);
+                } else if (score > 0) { 
                     generalSentences.push(item);
                 }
             });
         });
 
-        // We use Promise.all to fetch concurrently, but display immediately when done
-        await Promise.all(fetchPromises);
+        await Promise.allSettled(fetchPromises);
 
-        updateProgress(70, '③ 結果を表示中... / ④ スペック情報をバックグラウンドで調査開始');
+        updateProgress(70, '④ 結果を表示中 / スペック情報のバックグラウンド調査開始');
 
-        // Sort and deduplicate
         const getUniqueTop = (arr, limit) => {
             arr.sort((a, b) => b.score - a.score);
             const seen = new Set();
             return arr.filter(item => {
-                if(seen.has(item.text)) return false;
+                const cleanText = item.text.toLowerCase();
+                if(seen.has(item.text) || cleanText.includes('javascript') || cleanText.includes('cookie') || cleanText.includes('ログイン')) return false;
                 seen.add(item.text);
                 return true;
             }).slice(0, limit);
@@ -528,15 +539,14 @@
         const topQuestions = getUniqueTop(questionSentences, maxSentences / 2);
         const topGeneral = getUniqueTop(generalSentences, maxSentences / 2);
 
-        // Render Step 3
         renderList('question-results', topQuestions, 'question-empty');
         renderList('general-results', topGeneral, 'general-empty');
 
-        // Step 4 & 5: Background Specs Research
         document.getElementById('spec-spinner').classList.remove('hidden');
+        document.getElementById('spec-empty').style.display = 'block';
         
         setTimeout(async () => {
-            const specLinks = await searchDuckDuckGo(`${productName} スペック 仕様`);
+            const specLinks = await searchDuckDuckGo(`${productName} スペック 仕様 サイズ`);
             const specUrlsToFetch = specLinks.slice(0, Math.max(2, maxPages / 2));
             
             let specSentences = [];
@@ -545,23 +555,28 @@
                 if (!html) return;
                 const sentences = extractSentencesFromHTML(html);
                 sentences.forEach(s => {
-                    const score = scoreSentence(s, [], true);
+                    const score = scoreSentence(s, [], productName, true);
                     if (score > 0) specSentences.push({ text: s, url: url, score: score });
                 });
             });
 
-            await Promise.all(specPromises);
+            await Promise.allSettled(specPromises);
 
             const topSpecs = getUniqueTop(specSentences, maxSentences / 2);
+            document.getElementById('spec-empty').style.display = 'none';
             renderList('spec-results', topSpecs, 'spec-empty', true);
+            if(topSpecs.length === 0) {
+                document.getElementById('spec-empty').style.display = 'block';
+                document.getElementById('spec-empty').innerText = 'スペック情報が見つかりませんでした。';
+            }
             
             document.getElementById('spec-spinner').classList.add('hidden');
-            updateProgress(100, '✅ すべての調査が完了しました。');
+            document.getElementById('progress-title').innerText = '✅ 完了';
+            updateProgress(100, 'すべての調査が完了しました。');
             document.getElementById('main-spinner').style.display = 'none';
-        }, 100); // Slight delay to yield UI rendering
+        }, 100);
     }
 
-    // --- Helpers ---
     function updateProgress(percent, text) {
         document.getElementById('progress-fill').style.width = `${percent}%`;
         document.getElementById('progress-text').innerText = text;
@@ -579,23 +594,27 @@
             const li = document.createElement('li');
             li.className = `result-item ${isSpec ? 'spec-item' : ''}`;
             
-            // Clean up text slightly for display
-            let cleanText = item.text.replace(/^[\s　・]+/, '');
-            
-            li.innerHTML = `
-                ${cleanText}
-                <a href="${item.url}" target="_blank" class="source-link">[情報元を開く]</a>
-            `;
+            try {
+                const urlObj = new URL(item.url);
+                const domain = urlObj.hostname;
+                li.innerHTML = `
+                    ${item.text}
+                    <br><a href="${item.url}" target="_blank" class="source-link" rel="noopener noreferrer">🔗 情報元を開く (${domain})</a>
+                `;
+            } catch(e) {
+                li.innerHTML = `${item.text}`;
+            }
             ul.appendChild(li);
         });
     }
 
     function resetUI() {
+        abortController.abort();
+        stopScanner();
         document.getElementById('input-card').style.display = 'block';
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('results-section').style.display = 'none';
     }
-
 </script>
 </body>
 </html>
