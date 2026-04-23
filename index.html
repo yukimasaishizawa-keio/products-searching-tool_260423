@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sales Research Tool</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #007aff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a5;
+            --border-color: #333336;
+            --success-color: #34c759;
+            --danger-color: #ff3b30;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 24px;
+            font-weight: 700;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Forms & Inputs */
+        .input-group { margin-bottom: 16px; }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background-color: #2c2c2e;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--primary-color); }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+        button:active { opacity: 0.8; }
+
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: #2c2c2e; color: white; border: 1px solid var(--border-color); }
+        .btn-success { background-color: var(--success-color); color: white; }
+
+        /* Tabs & Buttons Groups */
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab-btn { flex: 1; background-color: #2c2c2e; color: var(--text-secondary); }
+        .tab-btn.active { background-color: var(--primary-color); color: white; }
+
+        .depth-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+        .depth-btn { flex: 1; font-size: 14px; padding: 10px; background-color: #2c2c2e; color: var(--text-secondary); }
+        .depth-btn.active { background-color: var(--primary-color); color: white; }
+
+        /* Scanner */
+        #scanner-container {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            display: none;
+            position: relative;
+            margin-bottom: 16px;
+        }
+        #video { width: 100%; display: block; }
+        
+        /* Progress UI */
+        #progress-section { display: none; margin-bottom: 20px; }
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background-color: #2c2c2e;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .status-text { font-size: 14px; color: var(--text-secondary); text-align: center; }
+
+        /* Results UI */
+        #results-section { display: none; }
+        .result-list { list-style: none; padding: 0; }
+        .result-item {
+            background: #2c2c2e;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            border-left: 4px solid var(--primary-color);
+        }
+        .result-item.spec-item { border-left-color: var(--success-color); }
+        .source-link {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .source-link:hover { text-decoration: underline; }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        .flex { display: flex; align-items: center; justify-content: space-between; }
+        
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .card { padding: 16px; }
+            h1 { font-size: 20px; }
+        }
+    </style>
+    <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Sales Research Tool</h1>
+
+    <div class="card" id="input-card">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('text')">② 型番検索</button>
+            <button class="tab-btn" onclick="switchTab('barcode')">① バーコード (JAN)</button>
+        </div>
+
+        <div id="text-input-section">
+            <div class="input-group">
+                <label>型番テキスト</label>
+                <input type="text" id="model-input" placeholder="例：WH-1000XM5 / EOS R6">
+            </div>
+        </div>
+
+        <div id="barcode-input-section" class="hidden">
+            <div id="scanner-container">
+                <video id="video"></video>
+            </div>
+            <button class="btn-secondary" id="start-scan-btn" onclick="startScanner()" style="margin-bottom: 12px;">📷 カメラを起動</button>
+            <div class="input-group">
+                <label>読み取り結果 (JAN)</label>
+                <input type="text" id="jan-input" placeholder="バーコードをスキャンまたは入力" readonly>
+            </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border-color); margin: 20px 0;">
+
+        <label style="display:block; margin-bottom:8px; font-size:14px; color:var(--text-secondary);">⭐ 調査の詳しさ</label>
+        <div class="depth-selector">
+            <button class="depth-btn" onclick="setDepth('fast', this)">高速<br><small>2ページ/10文</small></button>
+            <button class="depth-btn active" onclick="setDepth('standard', this)">標準<br><small>4ページ/20文</small></button>
+            <button class="depth-btn" onclick="setDepth('thorough', this)">徹底<br><small>8ページ/40文</small></button>
+        </div>
+
+        <div class="input-group">
+            <label>❓ 質問（重点調査項目）</label>
+            <input type="text" id="question-input" placeholder="例：初心者向け？ デメリットは？ 他社との違い？">
+        </div>
+
+        <button class="btn-primary" onclick="startResearch()">🚀 調査開始</button>
+    </div>
+
+    <div class="card" id="progress-section">
+        <div class="card-title"><div class="spinner" id="main-spinner"></div> <span id="progress-title">調査準備中...</span></div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="status-text" id="progress-text">初期化しています...</div>
+    </div>
+
+    <div id="results-section">
+        <div class="card">
+            <div class="card-title">① 基本情報</div>
+            <div id="basic-info-content" style="font-size: 16px;"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title" style="color: #ff9f0a;">② 質問関連情報（最優先）</div>
+            <ul class="result-list" id="question-results"></ul>
+            <div id="question-empty" class="text-secondary" style="font-size:14px; display:none;">関連情報が見つかりませんでした。</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">③ 一般特徴</div>
+            <ul class="result-list" id="general-results"></ul>
+            <div id="general-empty" class="text-secondary" style="font-size:14px; display:none;">特徴情報が見つかりませんでした。</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title flex">
+                <span style="color: var(--success-color);">④ 商品スペック</span>
+                <div class="spinner hidden" id="spec-spinner" style="border-top-color: var(--success-color); width:16px; height:16px;"></div>
+            </div>
+            <ul class="result-list" id="spec-results"></ul>
+            <div id="spec-empty" class="text-secondary" style="font-size:14px; display:none;">スペック情報が見つかりませんでした。</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const CONFIG = {
+        fast: { pages: 2, sentences: 10 },
+        standard: { pages: 4, sentences: 20 },
+        thorough: { pages: 8, sentences: 40 }
+    };
+    
+    // State
+    let currentMode = 'text'; // 'text' or 'barcode'
+    let currentDepth = 'standard';
+    let codeReader = null;
+
+    // --- UI Controls ---
+    function switchTab(mode) {
+        currentMode = mode;
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs[0].classList.toggle('active', mode === 'text');
+        tabs[1].classList.toggle('active', mode === 'barcode');
+
+        document.getElementById('text-input-section').classList.toggle('hidden', mode !== 'text');
+        document.getElementById('barcode-input-section').classList.toggle('hidden', mode !== 'barcode');
+
+        if (mode === 'text' && codeReader) stopScanner();
+    }
+
+    function setDepth(depth, btnElement) {
+        currentDepth = depth;
+        document.querySelectorAll('.depth-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+    }
+
+    // --- ZXing Barcode Scanner ---
+    async function startScanner() {
+        const container = document.getElementById('scanner-container');
+        container.style.display = 'block';
+        document.getElementById('start-scan-btn').innerText = 'カメラインストール中...';
+
+        try {
+            codeReader = new ZXing.BrowserMultiFormatReader();
+            const videoInputDevices = await codeReader.listVideoInputDevices();
+            
+            if (videoInputDevices.length === 0) {
+                alert('カメラが見つかりません');
+                return;
+            }
+            
+            // Prefer back camera
+            const selectedDeviceId = videoInputDevices.length > 1 ? videoInputDevices[1].deviceId : videoInputDevices[0].deviceId;
+            document.getElementById('start-scan-btn').innerText = 'スキャン中...';
+
+            codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+                if (result) {
+                    document.getElementById('jan-input').value = result.text;
+                    stopScanner();
+                    // Auto switch to manual input look to indicate success
+                    document.getElementById('start-scan-btn').innerText = '✅ スキャン成功';
+                }
+            });
+        } catch (err) {
+            console.error(err);
+            alert('カメラの起動に失敗しました。');
+        }
+    }
+
+    function stopScanner() {
+        if (codeReader) {
+            codeReader.reset();
+            document.getElementById('scanner-container').style.display = 'none';
+            document.getElementById('start-scan-btn').innerText = '📷 カメラを起動';
+        }
+    }
+
+    // --- Core Scraping Engine ---
+    // Note: To work purely in browser without backend, we use allorigins CORS proxy to fetch DuckDuckGo HTML
+    const CORS_PROXY = 'https://api.allorigins.win/get?url=';
+    
+    async function fetchWithTimeout(url, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: controller.signal });
+            const data = await res.json();
+            clearTimeout(timeout);
+            return data.contents;
+        } catch (e) {
+            clearTimeout(timeout);
+            console.warn('Fetch failed or timed out:', url);
+            return null;
+        }
+    }
+
+    async function searchDuckDuckGo(query) {
+        const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+        const html = await fetchWithTimeout(url);
+        if (!html) return [];
+        
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        // Extract links
+        const links = Array.from(doc.querySelectorAll('.result__snippet, .result__url, a.result__a'))
+            .map(el => el.href || el.getAttribute('href'))
+            .filter(href => href && href.startsWith('http') && !href.includes('duckduckgo.com'))
+            .map(href => {
+                // allorigins sometimes returns DDG redirect links, try to extract real URL
+                try {
+                    const urlObj = new URL(href);
+                    if (urlObj.searchParams.has('uddg')) return decodeURIComponent(urlObj.searchParams.get('uddg'));
+                    return href;
+                } catch(e) { return href; }
+            });
+        
+        return [...new Set(links)]; // unique
+    }
+
+    // --- Data Processing ---
+    function extractSentencesFromHTML(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        
+        // Remove structural and script tags
+        const tagsToRemove = ['script', 'style', 'nav', 'footer', 'header', 'noscript', 'aside', 'iframe', 'svg', 'form'];
+        tagsToRemove.forEach(tag => {
+            const elements = doc.querySelectorAll(tag);
+            elements.forEach(el => el.remove());
+        });
+
+        // Extract raw text
+        const text = doc.body ? doc.body.innerText || doc.body.textContent : '';
+        
+        // Split by Japanese punctuation and newlines
+        return text.split(/[。！？\n]/)
+            .map(s => s.trim())
+            .filter(s => s.length > 10 && s.length < 200); // Filter out too short or absurdly long strings
+    }
+
+    function scoreSentence(sentence, queryWords, isSpec = false) {
+        let score = 0;
+        const lowerSentence = sentence.toLowerCase();
+
+        if (isSpec) {
+            // Check for numbers followed by common spec units
+            if (/\d+(\.\d+)?\s*(mm|cm|g|kg|px|W|V|Hz|mAh|GB|TB|K|万画素|インチ|型|fps)/i.test(sentence)) score += 50;
+            if (lowerSentence.includes('仕様') || lowerSentence.includes('スペック')) score += 20;
+        } else {
+            // Score based on question keywords
+            queryWords.forEach(word => {
+                if (word && lowerSentence.includes(word.toLowerCase())) score += 100;
+            });
+        }
+        return score;
+    }
+
+    // --- Main Algorithm ---
+    async function startResearch() {
+        // UI Reset
+        document.getElementById('input-card').style.display = 'none';
+        document.getElementById('progress-section').style.display = 'block';
+        document.getElementById('results-section').style.display = 'none';
+        
+        // Clear previous results
+        document.getElementById('question-results').innerHTML = '';
+        document.getElementById('general-results').innerHTML = '';
+        document.getElementById('spec-results').innerHTML = '';
+        ['question', 'general', 'spec'].forEach(k => document.getElementById(`${k}-empty`).style.display = 'none');
+        
+        const questionText = document.getElementById('question-input').value.trim();
+        let productName = "";
+        let searchMethod = "";
+
+        updateProgress(10, '① 商品情報を特定中...');
+
+        // Step 1: Identify Product
+        if (currentMode === 'barcode') {
+            const jan = document.getElementById('jan-input').value.trim();
+            if (!jan) { alert('バーコードを読み取るか入力してください。'); resetUI(); return; }
+            searchMethod = `JANコード: ${jan}`;
+            
+            // Try to find product name via JAN search
+            const janResults = await searchDuckDuckGo(`JAN ${jan}`);
+            if (janResults.length > 0) {
+                const html = await fetchWithTimeout(janResults[0], 5000);
+                if (html) {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    productName = doc.title.replace(/価格.*|【.*】|通販.*/g, '').trim();
+                }
+            }
+            if(!productName) productName = `商品(JAN:${jan})`; // Fallback
+        } else {
+            productName = document.getElementById('model-input').value.trim();
+            if (!productName) { alert('型番を入力してください。'); resetUI(); return; }
+            searchMethod = `型番: ${productName}`;
+        }
+
+        // Display Step 1
+        document.getElementById('basic-info-content').innerHTML = `
+            <strong>${productName}</strong><br>
+            <span style="color: var(--text-secondary); font-size:14px;">検索元: ${searchMethod}</span>
+        `;
+        document.getElementById('results-section').style.display = 'block';
+
+        updateProgress(30, '② 質問関連の情報をWebから収集・解析中... (最優先)');
+
+        const maxPages = CONFIG[currentDepth].pages;
+        const maxSentences = CONFIG[currentDepth].sentences;
+        const qWords = questionText.split(/\s+/).filter(w => w);
+
+        // Step 2: Question & General Research (Priority)
+        const queries = [
+            questionText ? `${productName} ${questionText}` : `${productName} レビュー`,
+            `${productName} 評判`,
+            `${productName} メリット デメリット`
+        ];
+
+        let collectedLinks = [];
+        for (const q of queries) {
+            const links = await searchDuckDuckGo(q);
+            collectedLinks.push(...links);
+        }
+        collectedLinks = [...new Set(collectedLinks)].slice(0, maxPages);
+
+        let questionSentences = [];
+        let generalSentences = [];
+        
+        // Parallel Fetch
+        const fetchPromises = collectedLinks.map(async (url) => {
+            const html = await fetchWithTimeout(url);
+            if (!html) return;
+            const sentences = extractSentencesFromHTML(html);
+            
+            sentences.forEach(sentence => {
+                // Ensure sentence mentions product or question context slightly
+                if(sentence.length < 15) return;
+                
+                const qScore = questionText ? scoreSentence(sentence, qWords) : 0;
+                const item = { text: sentence, url: url, score: qScore };
+
+                if (qScore > 0) {
+                    questionSentences.push(item);
+                } else if (Math.random() > 0.8) { // Sample general sentences to avoid massive arrays
+                    generalSentences.push(item);
+                }
+            });
+        });
+
+        // We use Promise.all to fetch concurrently, but display immediately when done
+        await Promise.all(fetchPromises);
+
+        updateProgress(70, '③ 結果を表示中... / ④ スペック情報をバックグラウンドで調査開始');
+
+        // Sort and deduplicate
+        const getUniqueTop = (arr, limit) => {
+            arr.sort((a, b) => b.score - a.score);
+            const seen = new Set();
+            return arr.filter(item => {
+                if(seen.has(item.text)) return false;
+                seen.add(item.text);
+                return true;
+            }).slice(0, limit);
+        };
+
+        const topQuestions = getUniqueTop(questionSentences, maxSentences / 2);
+        const topGeneral = getUniqueTop(generalSentences, maxSentences / 2);
+
+        // Render Step 3
+        renderList('question-results', topQuestions, 'question-empty');
+        renderList('general-results', topGeneral, 'general-empty');
+
+        // Step 4 & 5: Background Specs Research
+        document.getElementById('spec-spinner').classList.remove('hidden');
+        
+        setTimeout(async () => {
+            const specLinks = await searchDuckDuckGo(`${productName} スペック 仕様`);
+            const specUrlsToFetch = specLinks.slice(0, Math.max(2, maxPages / 2));
+            
+            let specSentences = [];
+            const specPromises = specUrlsToFetch.map(async (url) => {
+                const html = await fetchWithTimeout(url);
+                if (!html) return;
+                const sentences = extractSentencesFromHTML(html);
+                sentences.forEach(s => {
+                    const score = scoreSentence(s, [], true);
+                    if (score > 0) specSentences.push({ text: s, url: url, score: score });
+                });
+            });
+
+            await Promise.all(specPromises);
+
+            const topSpecs = getUniqueTop(specSentences, maxSentences / 2);
+            renderList('spec-results', topSpecs, 'spec-empty', true);
+            
+            document.getElementById('spec-spinner').classList.add('hidden');
+            updateProgress(100, '✅ すべての調査が完了しました。');
+            document.getElementById('main-spinner').style.display = 'none';
+        }, 100); // Slight delay to yield UI rendering
+    }
+
+    // --- Helpers ---
+    function updateProgress(percent, text) {
+        document.getElementById('progress-fill').style.width = `${percent}%`;
+        document.getElementById('progress-text').innerText = text;
+    }
+
+    function renderList(elementId, items, emptyId, isSpec = false) {
+        const ul = document.getElementById(elementId);
+        ul.innerHTML = '';
+        if (items.length === 0) {
+            document.getElementById(emptyId).style.display = 'block';
+            return;
+        }
+        
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.className = `result-item ${isSpec ? 'spec-item' : ''}`;
+            
+            // Clean up text slightly for display
+            let cleanText = item.text.replace(/^[\s　・]+/, '');
+            
+            li.innerHTML = `
+                ${cleanText}
+                <a href="${item.url}" target="_blank" class="source-link">[情報元を開く]</a>
+            `;
+            ul.appendChild(li);
+        });
+    }
+
+    function resetUI() {
+        document.getElementById('input-card').style.display = 'block';
+        document.getElementById('progress-section').style.display = 'none';
+        document.getElementById('results-section').style.display = 'none';
+    }
+
+</script>
+</body>
+</html>
