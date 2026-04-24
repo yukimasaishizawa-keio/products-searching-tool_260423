@@ -13,8 +13,8 @@
             --text-secondary: #a0a0a5;
             --border-color: #333336;
             --success-color: #34c759;
-            --highlight-color: rgba(255, 159, 10, 0.3);
-            --highlight-text: #ff9f0a;
+            --highlight-color: rgba(255, 159, 10, 0.4);
+            --highlight-text: #ffd60a;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,7 +50,7 @@
         }
 
         .input-group { margin-bottom: 16px; }
-        .input-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-secondary); }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-secondary); font-weight: bold; }
 
         input[type="text"] {
             width: 100%; background-color: #2c2c2e; border: 1px solid var(--border-color);
@@ -73,17 +73,13 @@
         .tab-btn { flex: 1; background-color: #2c2c2e; color: var(--text-secondary); }
         .tab-btn.active { background-color: var(--primary-color); color: white; }
 
-        .depth-selector { display: flex; gap: 8px; margin-bottom: 20px; }
-        .depth-btn { flex: 1; font-size: 14px; padding: 10px; background-color: #2c2c2e; color: var(--text-secondary); }
-        .depth-btn.active { background-color: var(--primary-color); color: white; }
-
         #scanner-container { width: 100%; border-radius: 8px; overflow: hidden; background: #000; display: none; margin-bottom: 16px; }
         #video { width: 100%; display: block; }
         
         #progress-section { display: none; margin-bottom: 20px; }
         .progress-bar { width: 100%; height: 12px; background-color: #2c2c2e; border-radius: 6px; overflow: hidden; margin: 8px 0; }
         .progress-fill { height: 100%; background-color: var(--primary-color); width: 0%; transition: width 0.3s ease; }
-        .status-text { font-size: 14px; color: var(--text-secondary); text-align: center; }
+        .status-text { font-size: 14px; color: var(--text-secondary); text-align: center; margin-top: 8px; }
 
         #results-section { display: none; }
         .result-list { list-style: none; padding: 0; }
@@ -91,16 +87,34 @@
             background: #2c2c2e; padding: 16px; border-radius: 8px; margin-bottom: 12px;
             font-size: 15px; border-left: 4px solid var(--primary-color); line-height: 1.6;
         }
-        .result-item.spec-item { border-left-color: var(--success-color); }
         .result-title { font-weight: bold; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: block; }
         
-        /* 検索キーワードのハイライト */
+        /* 検索キーワードの強調 */
         mark {
             background-color: var(--highlight-color);
             color: var(--highlight-text);
             padding: 0 4px;
             border-radius: 4px;
             font-weight: bold;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* スペックの箇条書き用スタイル */
+        .spec-list {
+            list-style-type: disc;
+            padding-left: 24px;
+            margin-top: 8px;
+        }
+        .spec-list li {
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.5;
+            padding-left: 4px;
+        }
+        .spec-key {
+            color: var(--success-color);
+            font-weight: bold;
+            margin-right: 6px;
         }
 
         .source-link {
@@ -139,7 +153,7 @@
 
         <div id="text-input-section">
             <div class="input-group">
-                <label>型番テキスト</label>
+                <label>🔍 商品名・型番</label>
                 <input type="text" id="model-input" placeholder="例：FX30 / WH-1000XM5">
             </div>
         </div>
@@ -155,25 +169,16 @@
             </div>
         </div>
 
-        <hr style="border:0; border-top:1px solid var(--border-color); margin: 20px 0;">
-
-        <label style="display:block; margin-bottom:8px; font-size:14px; color:var(--text-secondary);">⭐ 調査の詳しさ（検索取得数）</label>
-        <div class="depth-selector">
-            <button class="depth-btn" onclick="setDepth('fast', this)">高速<br><small>即答重視</small></button>
-            <button class="depth-btn active" onclick="setDepth('standard', this)">標準<br><small>バランス</small></button>
-            <button class="depth-btn" onclick="setDepth('thorough', this)">徹底<br><small>情報量重視</small></button>
+        <div class="input-group" style="margin-top: 20px;">
+            <label>❓ 接客でお客様に聞かれたこと（質問事項）</label>
+            <input type="text" id="question-input" placeholder="例：解像度は？ デメリットは？ 初心者でも使える？">
         </div>
 
-        <div class="input-group">
-            <label>❓ 質問（接客時に答えたい内容）</label>
-            <input type="text" id="question-input" placeholder="例：解像度は？ デメリットは？ 他社との違い？">
-        </div>
-
-        <button class="btn-primary" id="search-btn" onclick="startResearch()">🚀 調査開始</button>
+        <button class="btn-primary" id="search-btn" onclick="startResearch()">🚀 即座に調査を開始</button>
     </div>
 
     <div class="card" id="progress-section">
-        <div class="card-title"><div class="spinner" id="main-spinner"></div> <span id="progress-title">調査中...</span></div>
+        <div class="card-title"><div class="spinner" id="main-spinner"></div> <span id="progress-title">情報収集＆解析中...</span></div>
         <div class="progress-bar">
             <div class="progress-fill" id="progress-fill"></div>
         </div>
@@ -193,17 +198,17 @@
         </div>
 
         <div class="card">
-            <div class="card-title">③ 商品の特徴・レビュー要約</div>
+            <div class="card-title">③ 商品の主な特徴・レビュー</div>
             <ul class="result-list" id="general-results"></ul>
             <div id="general-empty" class="text-secondary" style="font-size:14px; display:none;">特徴情報が見つかりませんでした。</div>
         </div>
 
         <div class="card">
             <div class="card-title flex">
-                <span style="color: var(--success-color);">④ 商品スペック</span>
+                <span style="color: var(--success-color);">④ 商品スペック（箇条書き抽出）</span>
                 <div class="spinner hidden" id="spec-spinner" style="border-top-color: var(--success-color); width:16px; height:16px;"></div>
             </div>
-            <ul class="result-list" id="spec-results"></ul>
+            <ul class="spec-list" id="spec-results"></ul>
             <div id="spec-empty" class="text-secondary" style="font-size:14px; display:none;">スペック情報を検索中...</div>
         </div>
         
@@ -212,14 +217,7 @@
 </div>
 
 <script>
-    const CONFIG = {
-        fast: { limit: 3 },
-        standard: { limit: 6 },
-        thorough: { limit: 12 }
-    };
-    
     let currentMode = 'text';
-    let currentDepth = 'standard';
     let codeReader = null;
     let abortController = new AbortController();
 
@@ -231,12 +229,6 @@
         document.getElementById('text-input-section').classList.toggle('hidden', mode !== 'text');
         document.getElementById('barcode-input-section').classList.toggle('hidden', mode !== 'barcode');
         if (mode === 'text' && codeReader) stopScanner();
-    }
-
-    function setDepth(depth, btnElement) {
-        currentDepth = depth;
-        document.querySelectorAll('.depth-btn').forEach(btn => btn.classList.remove('active'));
-        btnElement.classList.add('active');
     }
 
     async function startScanner() {
@@ -276,42 +268,54 @@
         }
     }
 
-    // CORS Proxy for searching
-    const CORS_PROXY = 'https://api.allorigins.win/get?url=';
-    
+    // 通信エラーを回避するための複数プロキシ（フォールバック）戦略
     async function fetchSearchHTML(query) {
-        const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+        const targetUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+        // 1. AllOrigins (キャッシュバスター付き)
+        const proxy1 = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&t=${Date.now()}`;
+        // 2. CodeTabs (予備プロキシ)
+        const proxy2 = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+
         try {
-            const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: abortController.signal });
-            if (!res.ok) return null;
+            const res = await fetch(proxy1, { signal: abortController.signal });
             const data = await res.json();
-            return data.contents;
+            if (data.contents && data.contents.includes('result__title')) {
+                return data.contents;
+            }
+            throw new Error("Proxy1 contents invalid");
         } catch (e) {
-            console.warn('Fetch failed:', e);
-            return null;
+            console.log("Proxy 1 failed, trying fallback...", e);
+            try {
+                const res2 = await fetch(proxy2, { signal: abortController.signal });
+                const text2 = await res2.text();
+                return text2;
+            } catch (e2) {
+                console.error("All proxies failed.");
+                return null;
+            }
         }
     }
 
-    // 質問から不要な助詞を取り除き、純粋な検索キーワード配列を作る
+    // 助詞を取り除き、検索キーワードにする
     function getKeywords(question) {
         if (!question) return [];
-        // 「は」「が」「を」「？」「とは」などをスペースに置換して単語に分割
         const clean = question.replace(/[はがのをにへやと！？?]/g, ' ').trim();
-        return clean.split(/[\s　]+/).filter(w => w.length > 0);
+        return clean.split(/[\s　]+/).filter(w => w.length > 1);
     }
 
-    // 検索エンジンのスニペット（概要）を直接解析する最強のロジック
-    async function getSnippets(query, keywords = [], isSpec = false) {
+    // 一般的なスニペット（要約）抽出
+    async function getSnippets(query, keywords = []) {
         const html = await fetchSearchHTML(query);
         if (!html) return [];
         
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const results = [];
         
-        const elements = doc.querySelectorAll('.result');
+        // DuckDuckGoのクラス変更にも耐えるよう複数指定
+        const elements = doc.querySelectorAll('.result, .web-result');
         elements.forEach(el => {
-            const titleEl = el.querySelector('.result__title a');
-            const snippetEl = el.querySelector('.result__snippet');
+            const titleEl = el.querySelector('.result__title a, a.result__url');
+            const snippetEl = el.querySelector('.result__snippet, .result__body');
             
             if (titleEl && snippetEl) {
                 const title = titleEl.textContent.trim();
@@ -327,25 +331,17 @@
                     }
                 } catch(e) {}
 
-                // 単なる販売ページ（Amazon等）は情報が薄いので除外
-                if(href && (href.includes('amazon.') || href.includes('rakuten.'))) return;
+                if(href && (href.includes('amazon.') || href.includes('rakuten.'))) return; // 通販直リンクは除外
 
                 let score = 0;
                 const lowerSnippet = snippet.toLowerCase();
                 
-                if (isSpec) {
-                    // スペック特有の単位があれば加点
-                    if (/\d+(\.\d+)?\s*(mm|cm|m|g|kg|px|W|V|Hz|mAh|GB|TB|K|万画素|インチ|型|fps)/i.test(snippet)) score += 50;
-                    if (lowerSnippet.match(/(仕様|スペック|サイズ|重量|重さ|寸法|搭載|解像度|センサー|バッテリー)/)) score += 30;
-                    score += 10;
-                } else if (keywords.length > 0) {
-                    // 質問キーワードが含まれていれば強力に加点（即答の要件を満たすため）
+                if (keywords.length > 0) {
                     keywords.forEach(word => {
                         if (lowerSnippet.includes(word.toLowerCase())) score += 100;
                     });
                 } else {
-                    // 一般の特徴検索
-                    if (lowerSnippet.match(/(良い|おすすめ|メリット|デメリット|違い|比較|評価|特徴|魅力)/)) score += 30;
+                    if (lowerSnippet.match(/(良い|おすすめ|メリット|デメリット|違い|比較|評価|特徴|魅力|使い勝手|操作性)/)) score += 30;
                     score += 10;
                 }
 
@@ -355,7 +351,6 @@
             }
         });
         
-        // スコア順にソートし、重複テキストを除去
         results.sort((a, b) => b.score - a.score);
         const uniqueResults = [];
         const seen = new Set();
@@ -368,12 +363,68 @@
         return uniqueResults;
     }
 
+    // ★追加機能：文章からスペック情報を「箇条書き（リスト）」形式に強制変換するエンジン
+    function extractSpecsAsBullets(snippets) {
+        const bullets = [];
+        const seenTexts = new Set();
+
+        const specKeywords = ['画素数', '有効画素', '解像度', '重量', '質量', '重さ', 'サイズ', '寸法', '外形寸法', 'センサー', 'マウント', 'バッテリー', 'モニター', '液晶', 'ISO', '焦点距離', '防塵', '防水', '端子', '手ブレ補正', 'メモリ'];
+
+        snippets.forEach(item => {
+            const text = item.text.replace(/[\r\n]+/g, ' ');
+            const sentences = text.split(/[。！？]/);
+
+            sentences.forEach(sentence => {
+                let s = sentence.trim();
+                if (s.length < 5 || s.length > 80) return;
+
+                // 抽出パターン1：「項目名：値」 (例: 画素数：2600万画素)
+                const colonMatch = s.match(/([^\s、。]{2,10})[\s]*[：:][\s]*([^\s、。]+(?:[\s]*[^\s、。]+)*)/);
+                if (colonMatch) {
+                    let key = colonMatch[1].trim();
+                    let val = colonMatch[2].trim();
+                    if (!seenTexts.has(key)) {
+                        bullets.push({ key: key, val: val, url: item.url });
+                        seenTexts.add(key);
+                        seenTexts.add(val);
+                        return; // パターン1で見つかれば次へ
+                    }
+                }
+
+                // 抽出パターン2：単位が含まれる文章 (例: 重量は約646gです)
+                const unitRegex = /([約最大]?\d+(?:\.\d+)?\s*(?:万画素|g|kg|mm|cm|インチ|型|mAh|Hz|fps|時間|W|V|TB|GB|MB))/;
+                if (unitRegex.test(s)) {
+                    // どのスペックを指しているか特定を試みる
+                    let matchedKey = "仕様";
+                    specKeywords.forEach(kw => { if (s.includes(kw)) matchedKey = kw; });
+                    
+                    if (!seenTexts.has(s)) {
+                        bullets.push({ key: matchedKey, val: s, url: item.url });
+                        seenTexts.add(s);
+                    }
+                }
+            });
+        });
+
+        // どうしても見つからない場合のフォールバック（最初の数件を無理やり切り出す）
+        if (bullets.length === 0) {
+            snippets.slice(0, 3).forEach(item => {
+                let shortText = item.text.split(/[。！？]/)[0];
+                if (shortText && /\d/.test(shortText)) { // 数字が含まれていればスペックとみなす
+                    bullets.push({ key: "特徴", val: shortText, url: item.url });
+                }
+            });
+        }
+
+        return bullets;
+    }
+
+    // キーワードハイライト処理
     function highlightKeywords(text, keywords) {
         if (!keywords || keywords.length === 0) return text;
         let result = text;
         keywords.forEach(kw => {
-            if (kw.length < 2) return; // 1文字のハイライトは誤爆が多いので回避
-            // 正規表現でハイライト
+            if (kw.length < 2) return;
             const regex = new RegExp(`(${kw})`, 'gi');
             result = result.replace(regex, '<mark>$1</mark>');
         });
@@ -399,7 +450,7 @@
             searchMethod = `型番: ${productName}`;
         }
 
-        // UI Reset
+        // 画面の初期化
         document.getElementById('input-card').style.display = 'none';
         document.getElementById('progress-section').style.display = 'block';
         document.getElementById('results-section').style.display = 'none';
@@ -411,9 +462,9 @@
 
         updateProgress(10, '① 検索準備中...');
 
-        // JANコードの場合は商品名を取得
+        // JANの場合は先に商品名を取得
         if (currentMode === 'barcode') {
-            const janSnippets = await getSnippets(productName, [], false);
+            const janSnippets = await getSnippets(productName, []);
             if (janSnippets.length > 0) {
                 const titleMatch = janSnippets[0].title.replace(/価格.*|【.*】|通販.*|ヨドバシ.*|ビックカメラ.*/g, '').trim();
                 if(titleMatch) productName = titleMatch;
@@ -426,15 +477,13 @@
         `;
         document.getElementById('results-section').style.display = 'block';
 
-        updateProgress(40, '② 検索エンジンから要約（スニペット）を抽出・解析中...');
+        updateProgress(40, '② 質問に対する答えを探索中...');
 
-        const resultLimit = CONFIG[currentDepth].limit;
-
-        // 質問がある場合は最優先で検索
+        // 1. 質問の調査
         if (questionText) {
             const query = `${productName} ${questionText}`;
-            const questionSnippets = await getSnippets(query, keywords, false);
-            renderList('question-results', questionSnippets.slice(0, resultLimit), 'question-empty', keywords);
+            const questionSnippets = await getSnippets(query, keywords);
+            renderList('question-results', questionSnippets.slice(0, 4), 'question-empty', keywords);
         } else {
             document.getElementById('question-empty').style.display = 'block';
             document.getElementById('question-empty').innerText = '質問が入力されていません。';
@@ -442,32 +491,32 @@
 
         updateProgress(70, '③ 商品の特徴とレビューを抽出中...');
 
-        // 一般特徴の検索
-        const generalQuery = `${productName} 特徴 レビュー 評価`;
-        const generalSnippets = await getSnippets(generalQuery, [], false);
-        renderList('general-results', generalSnippets.slice(0, resultLimit), 'general-empty', []);
+        // 2. 一般特徴の調査
+        const generalQuery = `${productName} 評価 レビュー 特徴`;
+        const generalSnippets = await getSnippets(generalQuery, []);
+        renderList('general-results', generalSnippets.slice(0, 4), 'general-empty', []);
 
-        // スペック調査の開始 (非同期)
+        // 3. スペック調査 (箇条書きエンジンに渡す)
         document.getElementById('spec-spinner').classList.remove('hidden');
         document.getElementById('spec-empty').style.display = 'block';
+        updateProgress(85, '④ スペック情報を解析し、箇条書きに変換中...');
         
         setTimeout(async () => {
-            const specQuery = `${productName} スペック 仕様 サイズ 解像度`;
-            const specSnippets = await getSnippets(specQuery, [], true);
+            const specQuery = `${productName} スペック 仕様 寸法 重量 画素数`;
+            const rawSpecSnippets = await getSnippets(specQuery, []);
             
             document.getElementById('spec-empty').style.display = 'none';
-            renderList('spec-results', specSnippets.slice(0, resultLimit), 'spec-empty', [], true);
             
-            if(specSnippets.length === 0) {
-                document.getElementById('spec-empty').style.display = 'block';
-                document.getElementById('spec-empty').innerText = 'スペック情報が見つかりませんでした。';
-            }
+            // 箇条書きロジックの適用
+            const bulletSpecs = extractSpecsAsBullets(rawSpecSnippets);
+            renderSpecList('spec-results', bulletSpecs, 'spec-empty');
             
             document.getElementById('spec-spinner').classList.add('hidden');
-            document.getElementById('progress-title').innerText = '✅ 完了';
+            document.getElementById('progress-title').innerText = '✅ 解析完了';
             updateProgress(100, 'すべての抽出が完了しました。');
             document.getElementById('main-spinner').style.display = 'none';
-        }, 100);
+            setTimeout(() => { document.getElementById('progress-section').style.display = 'none'; }, 2000);
+        }, 500); // 連続アクセスを避けるためのディレイ
     }
 
     function updateProgress(percent, text) {
@@ -475,7 +524,8 @@
         document.getElementById('progress-text').innerText = text;
     }
 
-    function renderList(elementId, items, emptyId, keywords = [], isSpec = false) {
+    // 通常の回答用レンダラー
+    function renderList(elementId, items, emptyId, keywords = []) {
         const ul = document.getElementById(elementId);
         ul.innerHTML = '';
         if (items.length === 0) {
@@ -485,18 +535,39 @@
         
         items.forEach(item => {
             const li = document.createElement('li');
-            li.className = `result-item ${isSpec ? 'spec-item' : ''}`;
-            
-            // テキスト内のキーワードをハイライト
+            li.className = 'result-item';
             const highlightedText = highlightKeywords(item.text, keywords);
-            
             let domain = "Link";
             try { domain = new URL(item.url).hostname; } catch(e) {}
 
             li.innerHTML = `
                 <span class="result-title">${item.title}</span>
                 ${highlightedText}
-                <br><a href="${item.url}" target="_blank" class="source-link" rel="noopener noreferrer">🔗 情報元ページを開く (${domain})</a>
+                <br><a href="${item.url}" target="_blank" class="source-link" rel="noopener noreferrer">🔗 情報元を開く (${domain})</a>
+            `;
+            ul.appendChild(li);
+        });
+    }
+
+    // スペック専用の箇条書きレンダラー
+    function renderSpecList(elementId, bullets, emptyId) {
+        const ul = document.getElementById(elementId);
+        ul.innerHTML = '';
+        if (bullets.length === 0) {
+            document.getElementById(emptyId).style.display = 'block';
+            document.getElementById(emptyId).innerText = 'スペック情報が抽出できませんでした。';
+            return;
+        }
+
+        bullets.forEach(b => {
+            const li = document.createElement('li');
+            // 値の中にキーワード（キー）が含まれていたら重複を避けるために置換
+            let displayVal = b.val;
+            if (displayVal.startsWith(b.key)) displayVal = displayVal.replace(b.key, '').replace(/^[:：\s]+/, '');
+
+            li.innerHTML = `
+                <span class="spec-key">${b.key}:</span> ${displayVal} 
+                <a href="${b.url}" target="_blank" style="font-size:11px; color:var(--text-secondary); text-decoration:none; margin-left:8px;">[🔗]</a>
             `;
             ul.appendChild(li);
         });
@@ -508,6 +579,11 @@
         document.getElementById('input-card').style.display = 'block';
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('results-section').style.display = 'none';
+        
+        // 進行状況バーをリセット
+        updateProgress(0, '待機中...');
+        document.getElementById('progress-title').innerText = '情報収集＆解析中...';
+        document.getElementById('main-spinner').style.display = 'inline-block';
     }
 </script>
 </body>
